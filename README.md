@@ -69,23 +69,29 @@ Penulis dapat mengunggah gambar langsung di Editor WYSIWYG, yang akan disimpan s
    - **Variable name**: `DB`
    - **D1 database**: Pilih `parenting-db`
 4. Simpan perubahan.
-5. Masuk ke tab **Custom domains** -> Klik **Set up a custom domain**.
+5. Lalu - Masuk ke tab **Custom domains** -> Klik **Set up a custom domain**.
 6. Ketik `parenting.my.id` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
 
 ---
 
-## 🔑 AKSED PORTAL ADMIN (`/admin`) & CARA PENGGUNAAN
+## 🔗 LANGKAH 6: Hubungkan Domain `news.biz.id`
+1. Masuk ke tab **Custom domains** -> Klik **Set up a custom domain**.
+2. Ketik `parenting.my.id` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
+
+---
+
+## 🔑 AKSES PORTAL ADMIN (`/admin`) & CARA PENGGUNAAN
 Situs Anda kini aktif di **https://parenting.my.id**!
 Akses portal admin berbasis web di:
 👉 **`https://parenting.my.id/admin`**
 
 ### Kredensial Login Default:
 - **Akun Admin (Akses Penuh):**
-  - Email: `admin@parenting.my.id`
-  - Password: `admin123`
+  - Email: `admin@...`
+  - Password: `...`
 - **Akun Penulis / Writer (Editor Artikel):**
-  - Email: `penulis@parenting.my.id`
-  - Password: `writer123`
+  - Email: `penulis@`
+  - Password: ``
 
 ---
 
