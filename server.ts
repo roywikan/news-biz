@@ -264,6 +264,103 @@ async function startServer() {
     });
   });
 
+  // Comments mock store
+  const commentsStore: any[] = [
+    {
+      id: 1,
+      postSlug: 'gizi-seimbang-balita-1-3-tahun',
+      userName: 'Siti Rahmawati',
+      userEmail: 'siti.rahmawati@gmail.com',
+      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+      content: 'Artikel yang sangat bermanfaat! Informasi gizi makro dan mikronya sangat jelas untuk panduan menu harian balita saya.',
+      status: 'approved',
+      createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
+    },
+    {
+      id: 2,
+      postSlug: 'gizi-seimbang-balita-1-3-tahun',
+      userName: 'Budi Santoso',
+      userEmail: 'budi.santoso@gmail.com',
+      userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+      content: 'Terima kasih Dokter Ratna atas pembahasannya. Sangat membantu mengatasi anak saya yang sedang Gerakan Tutup Mulut (GTM).',
+      status: 'approved',
+      createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+    }
+  ];
+
+  // Helper decode JWT
+  const decodeJwtLocal = (token: string) => {
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+      return JSON.parse(decoded);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // GET /api/comments
+  app.get("/api/comments", (req, res) => {
+    const { postSlug } = req.query;
+    if (postSlug) {
+      const filtered = commentsStore.filter(c => c.postSlug === postSlug && c.status === 'approved');
+      return res.json(filtered);
+    }
+    res.json(commentsStore);
+  });
+
+  // POST /api/comments
+  app.post("/api/comments", (req, res) => {
+    const { postSlug, content, googleCredential } = req.body || {};
+    let userName = req.body?.userName || '';
+    let userEmail = req.body?.userEmail || '';
+    let userAvatar = req.body?.userAvatar || '';
+
+    if (!postSlug || !content || !content.trim()) {
+      return res.status(400).json({ error: "Slug artikel dan isi komentar wajib diisi." });
+    }
+
+    if (googleCredential) {
+      const gPayload = decodeJwtLocal(googleCredential);
+      if (gPayload && gPayload.email) {
+        userName = gPayload.name || userName || 'Pembaca Google';
+        userEmail = gPayload.email;
+        userAvatar = gPayload.picture || userAvatar || 'https://lh3.googleusercontent.com/a/default-user';
+      }
+    }
+
+    if (!userName || !userEmail) {
+      return res.status(401).json({ error: "Harap login dengan akun Google terlebih dahulu." });
+    }
+
+    const cleanAvatar = userAvatar || 'https://lh3.googleusercontent.com/a/default-user';
+    const newComment = {
+      id: Date.now(),
+      postSlug,
+      userName,
+      userEmail,
+      userAvatar: cleanAvatar,
+      content: String(content).trim(),
+      status: 'approved',
+      createdAt: new Date().toISOString()
+    };
+
+    commentsStore.unshift(newComment);
+    res.json({ success: true, comment: newComment });
+  });
+
+  // DELETE /api/comments/:id
+  app.delete("/api/comments/:id", (req, res) => {
+    const commentId = Number(req.params.id);
+    const index = commentsStore.findIndex(c => c.id === commentId);
+    if (index !== -1) {
+      commentsStore.splice(index, 1);
+    }
+    res.json({ success: true, id: commentId });
+  });
+
   // 12. POST /api/ai/generate-meta
   app.post("/api/ai/generate-meta", async (req, res) => {
     const { title, content } = req.body || {};
