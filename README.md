@@ -58,8 +58,8 @@ Penulis dapat mengunggah gambar langsung di Editor WYSIWYG, yang akan disimpan s
    - `GITHUB_OWNER`: *(Username GitHub Anda)*
    - `GITHUB_REPO`: `parenting-my-id`
    - `GITHUB_BRANCH`: `main`
-7. Klik **Save and Deploy**. Cloudflare akan membangun dan mempublikasikan situs Anda secara otomatis!
-
+7. Edit dan sesuaikan isi wrangler.toml seperti isian nomor 6 tersebut. **Jangan berbeda value nya**!
+8. Klik **Save and Deploy**. Cloudflare akan membangun dan mempublikasikan situs Anda secara otomatis!
 ---
 
 ## 🔗 LANGKAH 5: Hubungkan Binding Database D1 & Domain `parenting.my.id`
