@@ -93,6 +93,17 @@ export interface Post {
   updatedAt: string;
 }
 
+export interface Comment {
+  id: number;
+  postSlug: string;
+  userName: string;
+  userEmail: string;
+  userAvatar: string;
+  content: string;
+  createdAt: string;
+  status?: 'approved' | 'spam' | 'pending';
+}
+
 export interface AutoLink {
   id: number;
   keyword: string;
