@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Post, AutoLink, User, SiteConfig } from '../types';
+import { Post, AutoLink, User, SiteConfig, Comment } from '../types';
 import { 
   ShieldCheck, FileText, Link as LinkIcon, Plus, Trash2, Edit3, Save, 
   Upload, Eye, Sparkles, CheckCircle2, RefreshCw, Bold, Italic, Heading2, 
@@ -48,8 +48,46 @@ export default function AdminPortal({
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Admin tabs: 'posts' | 'editor' | 'autolinks' | 'sitemap' | 'config' | 'security'
-  const [activeTab, setActiveTab] = useState<'posts' | 'editor' | 'autolinks' | 'sitemap' | 'config' | 'security'>('posts');
+  // Admin tabs: 'posts' | 'editor' | 'autolinks' | 'comments' | 'sitemap' | 'config' | 'security'
+  const [activeTab, setActiveTab] = useState<'posts' | 'editor' | 'autolinks' | 'comments' | 'sitemap' | 'config' | 'security'>('posts');
+
+  // Comments Moderation State
+  const [allComments, setAllComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentsSearch, setCommentsSearch] = useState('');
+
+  const fetchAllComments = async () => {
+    try {
+      setLoadingComments(true);
+      const res = await fetch('/api/comments');
+      if (res.ok) {
+        const data = await res.json();
+        setAllComments(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Error fetching comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'comments') {
+      fetchAllComments();
+    }
+  }, [activeTab]);
+
+  const handleDeleteComment = async (id: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus komentar ini dari database?')) return;
+    try {
+      const res = await fetch(`/api/comments/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAllComments((prev) => prev.filter((c) => c.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
+  };
 
   // Editor State
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -698,6 +736,18 @@ export default function AdminPortal({
         </button>
 
         <button
+          onClick={() => setActiveTab('comments')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeTab === 'comments'
+              ? 'bg-rose-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Moderasi Komentar ({allComments.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('sitemap')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeTab === 'sitemap'
@@ -944,6 +994,118 @@ export default function AdminPortal({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* TAB: COMMENTS MODERATION */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'comments' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-rose-600" />
+                  <span>Moderasi Komentar Pembaca ({allComments.length})</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Pantau, urutkan, dan hapus komentar spam atau tidak pantas secara real-time dari database D1.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Cari komentar atau pembaca..."
+                    value={commentsSearch}
+                    onChange={(e) => setCommentsSearch(e.target.value)}
+                    className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <button
+                  onClick={fetchAllComments}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
+                  title="Refresh Komentar"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {loadingComments ? (
+              <div className="text-center py-8 text-xs text-slate-400 animate-pulse">
+                Memuat daftar komentar dari Cloudflare D1...
+              </div>
+            ) : allComments.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-500">
+                Belum ada komentar pembaca yang masuk.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 uppercase text-[10px] font-bold text-slate-500">
+                    <tr>
+                      <th className="p-3 rounded-l-xl">Pembaca Google</th>
+                      <th className="p-3">Slug Artikel</th>
+                      <th className="p-3">Isi Komentar</th>
+                      <th className="p-3">Waktu</th>
+                      <th className="p-3 text-right rounded-r-xl">Aksi Moderasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {allComments
+                      .filter(
+                        (c) =>
+                          c.userName.toLowerCase().includes(commentsSearch.toLowerCase()) ||
+                          c.content.toLowerCase().includes(commentsSearch.toLowerCase()) ||
+                          c.postSlug.toLowerCase().includes(commentsSearch.toLowerCase())
+                      )
+                      .map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                          <td className="p-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                            <img
+                              src={c.userAvatar || 'https://lh3.googleusercontent.com/a/default-user'}
+                              alt={c.userName}
+                              className="w-7 h-7 rounded-full object-cover border border-rose-300 shrink-0"
+                            />
+                            <div>
+                              <div className="font-bold text-xs">{c.userName}</div>
+                              <div className="text-[10px] text-slate-400">{c.userEmail}</div>
+                            </div>
+                          </td>
+                          <td className="p-3 font-mono text-[11px] text-rose-600 font-semibold max-w-[140px] truncate">
+                            /baca/{c.postSlug}
+                          </td>
+                          <td className="p-3 max-w-xs text-slate-800 dark:text-slate-200 leading-normal">
+                            {c.content}
+                          </td>
+                          <td className="p-3 text-[11px] text-slate-400 whitespace-nowrap">
+                            {new Date(c.createdAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="p-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => handleDeleteComment(c.id)}
+                              className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white font-bold text-xs transition-all flex items-center gap-1 ml-auto"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Hapus
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
