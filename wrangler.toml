@@ -12,16 +12,16 @@ pages_build_output_dir = "dist"
 # Cloudflare D1 Database Binding
 [[d1_databases]]
 binding = "DB"
-database_name = "blog-db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+database_name = "news-biz-id"
+database_id = "25ef0e79-4cfe-4cee-a71b-2e9009886a5b"
 
 # Environment Variables
 [vars]
-SITE_NAME = "Modern Edge Blog Engine"
-SITE_DOMAIN = "yourdomain.com"
-SITE_URL = "https://yourdomain.com"
+SITE_NAME = "News Biz"
+SITE_DOMAIN = "news.biz.id"
+SITE_URL = "https://news.biz.id"
 GITHUB_OWNER = "roywikan"
-GITHUB_REPO = "blog-my-repo"
+GITHUB_REPO = "news-biz"
 GITHUB_BRANCH = "main"
 
 
