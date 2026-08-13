@@ -5,6 +5,7 @@ import { getDerivedDomain } from '../lib/config';
 import { marked } from 'marked';
 import { Clock, Eye, Calendar, ArrowLeft, Share2, Check, Bookmark, Sparkles, MessageCircle, Twitter, Facebook, Copy } from 'lucide-react';
 import SEOHelper from '../components/SEOHelper';
+import CommentsSection from '../components/CommentsSection';
 
 interface ArticleDetailViewProps {
   slug: string;
@@ -296,6 +297,9 @@ export default function ArticleDetailView({
           </p>
         </div>
       </div>
+
+      {/* COMMENTS & DISCUSSION SECTION */}
+      <CommentsSection postSlug={post.slug} />
 
       {/* RELATED POSTS */}
       {relatedPosts.length > 0 && (
