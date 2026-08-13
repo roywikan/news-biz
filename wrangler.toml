@@ -9,11 +9,6 @@ compatibility_flags = ["nodejs_compat"]
 # Cloudflare Pages Build Output Directory
 pages_build_output_dir = "dist"
 
-# Cloudflare D1 Database Binding
-[[d1_databases]]
-binding = "DB"
-database_name = "news-biz-id"
-database_id = "25ef0e79-4cfe-4cee-a71b-2e9009886a5b"
 
 # Environment Variables
 [vars]
