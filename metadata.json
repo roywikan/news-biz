@@ -1,0 +1,8 @@
+{
+  "name": "CF Github - Modern Edge Blog Engine",
+  "description": "Sistem Blog Engine Multi-Domain Cloudflare D1 & GitHub CMS modern, ultra-cepat, dan SEO-friendly untuk berbagai domain name di DNS CF",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
