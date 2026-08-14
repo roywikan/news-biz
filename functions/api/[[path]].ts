@@ -213,6 +213,39 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       }
     };
 
+    // 6.0 GET /api/debug-d1 (Diagnostic Endpoint to test D1 database status and tables)
+    if (path === '/api/debug-d1' && method === 'GET') {
+      const hasDB = Boolean(env.DB);
+      let tables: any[] = [];
+      let commentsCount = 0;
+      let d1Error: string | null = null;
+
+      if (env.DB) {
+        try {
+          const { results: tableList } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+          tables = tableList || [];
+
+          try {
+            const countRes = await env.DB.prepare("SELECT COUNT(*) as total FROM comments").first();
+            commentsCount = countRes?.total || 0;
+          } catch (cErr: any) {
+            commentsCount = -1;
+          }
+        } catch (err: any) {
+          d1Error = err?.message || String(err);
+        }
+      }
+
+      return jsonResponse({
+        status: hasDB ? 'connected' : 'binding_missing',
+        hasEnvDB: hasDB,
+        hasConfigKV: Boolean(env.CONFIG_KV),
+        tables,
+        commentsCount,
+        d1Error
+      });
+    }
+
     // 6.1 GET /api/comments
     if (path === '/api/comments' && method === 'GET') {
       const postSlug = url.searchParams.get('postSlug');
@@ -311,6 +344,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       };
 
       let savedInD1 = false;
+      let d1Error: string | null = null;
       if (env.DB) {
         try {
           await env.DB.prepare(`
@@ -335,9 +369,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             newCommentObj.id = insertRes.meta.last_row_id;
           }
           savedInD1 = true;
-        } catch (e) {
+        } catch (e: any) {
+          d1Error = e?.message || String(e);
           console.error('Error inserting comment into D1:', e);
         }
+      } else {
+        d1Error = 'env.DB is undefined. Check Cloudflare Pages D1 binding named DB.';
       }
 
       // KV Storage Fallback & Sync
@@ -354,7 +391,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return jsonResponse({
         success: true,
         comment: newCommentObj,
-        savedInD1
+        savedInD1,
+        hasEnvDB: Boolean(env.DB),
+        d1Error
       });
     }
 
