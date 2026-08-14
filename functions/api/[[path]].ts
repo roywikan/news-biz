@@ -1,5 +1,6 @@
 interface Env {
   DB?: any;
+  CONFIG_KV?: any;
   SITE_DOMAIN?: string;
   SITE_URL?: string;
   GITHUB_TOKEN?: string;
@@ -237,19 +238,36 @@ export const onRequest: PagesFunction<Env> = async (context) => {
               WHERE post_slug = ? AND status = 'approved' 
               ORDER BY id DESC
             `).bind(postSlug).all();
-            return jsonResponse(results || []);
+            if (results && results.length > 0) {
+              return jsonResponse(results);
+            }
           } else {
             const { results } = await env.DB.prepare(`
               SELECT id, post_slug as postSlug, user_name as userName, user_email as userEmail, user_avatar as userAvatar, content, status, created_at as createdAt 
               FROM comments 
               ORDER BY id DESC
             `).all();
-            return jsonResponse(results || []);
+            if (results && results.length > 0) {
+              return jsonResponse(results);
+            }
           }
         } catch (e) {
           console.error('Error fetching comments from D1:', e);
         }
       }
+
+      // KV Fallback if DB not present or empty
+      if (env.CONFIG_KV && postSlug) {
+        try {
+          const kvComments = await env.CONFIG_KV.get(`comments_${postSlug}`, { type: 'json' });
+          if (Array.isArray(kvComments) && kvComments.length > 0) {
+            return jsonResponse(kvComments);
+          }
+        } catch (e) {
+          console.error('KV comment fetch error:', e);
+        }
+      }
+
       return jsonResponse([]);
     }
 
@@ -281,7 +299,18 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const cleanAvatar = userAvatar || 'https://lh3.googleusercontent.com/a/default-user';
       const cleanContent = String(content).trim();
       const nowIso = new Date().toISOString();
+      const newCommentObj = {
+        id: Date.now(),
+        postSlug,
+        userName,
+        userEmail,
+        userAvatar: cleanAvatar,
+        content: cleanContent,
+        status: 'approved',
+        createdAt: nowIso
+      };
 
+      let savedInD1 = false;
       if (env.DB) {
         try {
           await env.DB.prepare(`
@@ -302,36 +331,30 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             VALUES (?, ?, ?, ?, ?, 'approved', ?)
           `).bind(postSlug, userName, userEmail, cleanAvatar, cleanContent, nowIso).run();
 
-          return jsonResponse({
-            success: true,
-            comment: {
-              id: insertRes.meta?.last_row_id || Date.now(),
-              postSlug,
-              userName,
-              userEmail,
-              userAvatar: cleanAvatar,
-              content: cleanContent,
-              status: 'approved',
-              createdAt: nowIso
-            }
-          });
+          if (insertRes.meta?.last_row_id) {
+            newCommentObj.id = insertRes.meta.last_row_id;
+          }
+          savedInD1 = true;
         } catch (e) {
           console.error('Error inserting comment into D1:', e);
         }
       }
 
+      // KV Storage Fallback & Sync
+      if (env.CONFIG_KV) {
+        try {
+          const existingKv = (await env.CONFIG_KV.get(`comments_${postSlug}`, { type: 'json' })) as any[] || [];
+          const updatedKv = [newCommentObj, ...existingKv.filter(c => c.id !== newCommentObj.id)];
+          await env.CONFIG_KV.put(`comments_${postSlug}`, JSON.stringify(updatedKv));
+        } catch (e) {
+          console.error('Error saving comment to KV:', e);
+        }
+      }
+
       return jsonResponse({
         success: true,
-        comment: {
-          id: Date.now(),
-          postSlug,
-          userName,
-          userEmail,
-          userAvatar: cleanAvatar,
-          content: cleanContent,
-          status: 'approved',
-          createdAt: nowIso
-        }
+        comment: newCommentObj,
+        savedInD1
       });
     }
 
