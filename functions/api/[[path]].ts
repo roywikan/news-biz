@@ -199,6 +199,156 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return jsonResponse({ success: true, message: 'Autolink berhasil dihapus' });
     }
 
+    // Helper decode JWT
+    const decodeJwtCloud = (token: string) => {
+      try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = atob(payloadBase64);
+        return JSON.parse(decoded);
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // 6.1 GET /api/comments
+    if (path === '/api/comments' && method === 'GET') {
+      const postSlug = url.searchParams.get('postSlug');
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS comments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              post_slug TEXT NOT NULL,
+              user_name TEXT NOT NULL,
+              user_email TEXT NOT NULL,
+              user_avatar TEXT NOT NULL,
+              content TEXT NOT NULL,
+              status TEXT DEFAULT 'approved',
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run();
+
+          if (postSlug) {
+            const { results } = await env.DB.prepare(`
+              SELECT id, post_slug as postSlug, user_name as userName, user_email as userEmail, user_avatar as userAvatar, content, status, created_at as createdAt 
+              FROM comments 
+              WHERE post_slug = ? AND status = 'approved' 
+              ORDER BY id DESC
+            `).bind(postSlug).all();
+            return jsonResponse(results || []);
+          } else {
+            const { results } = await env.DB.prepare(`
+              SELECT id, post_slug as postSlug, user_name as userName, user_email as userEmail, user_avatar as userAvatar, content, status, created_at as createdAt 
+              FROM comments 
+              ORDER BY id DESC
+            `).all();
+            return jsonResponse(results || []);
+          }
+        } catch (e) {
+          console.error('Error fetching comments from D1:', e);
+        }
+      }
+      return jsonResponse([]);
+    }
+
+    // 6.2 POST /api/comments
+    if (path === '/api/comments' && method === 'POST') {
+      const body = await request.json() as any;
+      const { postSlug, content, googleCredential } = body;
+      let userName = body.userName || '';
+      let userEmail = body.userEmail || '';
+      let userAvatar = body.userAvatar || '';
+
+      if (!postSlug || !content || !content.trim()) {
+        return jsonResponse({ error: 'Slug artikel dan isi komentar wajib diisi.' }, 400);
+      }
+
+      if (googleCredential) {
+        const gPayload = decodeJwtCloud(googleCredential);
+        if (gPayload && gPayload.email) {
+          userName = gPayload.name || userName || 'Pembaca Google';
+          userEmail = gPayload.email;
+          userAvatar = gPayload.picture || userAvatar || 'https://lh3.googleusercontent.com/a/default-user';
+        }
+      }
+
+      if (!userName || !userEmail) {
+        return jsonResponse({ error: 'Harap login dengan akun Google terlebih dahulu.' }, 401);
+      }
+
+      const cleanAvatar = userAvatar || 'https://lh3.googleusercontent.com/a/default-user';
+      const cleanContent = String(content).trim();
+      const nowIso = new Date().toISOString();
+
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS comments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              post_slug TEXT NOT NULL,
+              user_name TEXT NOT NULL,
+              user_email TEXT NOT NULL,
+              user_avatar TEXT NOT NULL,
+              content TEXT NOT NULL,
+              status TEXT DEFAULT 'approved',
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run();
+
+          const insertRes = await env.DB.prepare(`
+            INSERT INTO comments (post_slug, user_name, user_email, user_avatar, content, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'approved', ?)
+          `).bind(postSlug, userName, userEmail, cleanAvatar, cleanContent, nowIso).run();
+
+          return jsonResponse({
+            success: true,
+            comment: {
+              id: insertRes.meta?.last_row_id || Date.now(),
+              postSlug,
+              userName,
+              userEmail,
+              userAvatar: cleanAvatar,
+              content: cleanContent,
+              status: 'approved',
+              createdAt: nowIso
+            }
+          });
+        } catch (e) {
+          console.error('Error inserting comment into D1:', e);
+        }
+      }
+
+      return jsonResponse({
+        success: true,
+        comment: {
+          id: Date.now(),
+          postSlug,
+          userName,
+          userEmail,
+          userAvatar: cleanAvatar,
+          content: cleanContent,
+          status: 'approved',
+          createdAt: nowIso
+        }
+      });
+    }
+
+    // 6.3 DELETE /api/comments/:id
+    if (path.startsWith('/api/comments/') && method === 'DELETE') {
+      const parts = path.split('/');
+      const commentId = parts[parts.length - 1];
+      if (env.DB && commentId) {
+        try {
+          await env.DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run();
+        } catch (e) {
+          console.error('Error deleting comment from D1:', e);
+        }
+      }
+      return jsonResponse({ success: true, id: commentId });
+    }
+
     // 7. GET /api/config (Public site settings ONLY)
     if (path === '/api/config' && method === 'GET') {
       if (env.DB) {
