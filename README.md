@@ -99,7 +99,7 @@ DEBUG: https://domain.com/api/debug-d1
 
 ---
 
-Tentu, berikut adalah panduan langkah demi langkah untuk membuat **Google OAuth 2.0 Client ID** dan memasukkannya ke **Cloudflare Pages**:
+## Panduan langkah demi langkah untuk membuat **Google OAuth 2.0 Client ID** dan memasukkannya ke **Cloudflare Pages**:
 
 ---
 
@@ -151,86 +151,140 @@ Tentu, berikut adalah panduan langkah demi langkah untuk membuat **Google OAuth 
 
 7. 
 ---
-
-🏆 Rekomendasi Utama: Gunakan wrangler.toml sebagai Single Source of Truth
-Sangat disarankan 100% menggunakan wrangler.toml (Infrastructure as Code) dan tidak mencampur konfigurasi manual di Dashboard Pages.
-Alasan Mengapa wrangler.toml Jauh Lebih Baik:
-Pencegahan Human Error & Mismatch ID:
-Ketika Anda membuka repositori di masa depan, Anda langsung melihat dengan jelas database ID mana yang sedang aktif (25ef0e79-4cfe-4cee-a71b-2e9009886a5b) tanpa perlu menebak-nebak apa yang pernah diklik di dashboard.
-Otomatis Sync saat Deploy:
-Setiap kali ada commit/push baru atau redeploy di branch manapun, Cloudflare Pages akan otomatis membaca wrangler.toml tanpa perlu klik manual tombol "Add Binding" atau "Retry Deployment" di dashboard.
-Pesan "Managed through wrangler.toml":
-Cloudflare Pages generasi sekarang secara default mengunci pengaturan binding di dashboard jika mendeteksi adanya file wrangler.toml, sehingga jika mencoba mengubah via dashboard sering kali diabaikan oleh sistem.
-🛡️ 4 Aturan Praktis (Best Practices) untuk Proyek Ini:
-Komponen	Tempat Konfigurasi Terbaik	Keterangan
-D1 Database Binding (DB)	wrangler.toml ([[d1_databases]])	ID database publik aman dicatat di file konfigurasi.
-KV Namespace (CONFIG_KV)	wrangler.toml ([[kv_namespaces]])	Pasang jika ingin edge caching, atau hapus jika cukup D1 saja.
-Variabel Umum (SITE_URL, GITHUB_REPO)	wrangler.toml ([vars])	Mudah diubah jika domain berganti.
-Rahasia / Secrets (GITHUB_TOKEN, ADMIN_PASSWORD)	Cloudflare Dashboard (Settings → Environment Variables)	Wajib di Dashboard agar token GitHub tidak bocor ke publik di file Git.
-💡 Tips Cepat Pengecekan Selanjutnya:
-Jika suatu saat Anda membuat database baru atau ingin memverifikasi koneksi database di lingkungan production:
-Cukup buka endpoint: https://news.biz.id/api/debug-d1
-Endpoint ini akan langsung mengembalikan tabel apa saja yang terbaca, total jumlah komentar, dan status koneksi env.DB secara real-time.
+Berikut adalah penulisan ulang agar tampil lebih rapi, terstruktur, dan mudah dipahami:
 
 ---
 
-🗺️ Diagram Alur Singkat
-code
-Text
-1. Browser Request (/post/slug) 
-       ⬇
-2. functions/api/[[path]].ts  (Cloudflare Edge SSR: Ambil Data & Inject Meta Tags)
-       ⬇
-3. index.html & src/main.tsx  (HTML Skeleton & Bootstrapping React)
-       ⬇
-4. src/App.tsx                (Routing, Ambil Data Post dari API/D1/State)
-       ⬇
-5. src/components/ArticleReader.tsx (Markdown-to-HTML Parser, TOC, Autolinks, Ads)
-       ⬇
-6. DOM Output (<div class="article-body">...</div>)
-📂 Urutan Kerja File Secara Rinci:
-1. functions/api/[[path]].ts (Cloudflare Pages Function / Edge SSR)
-Kapan bekerja: Saat URL artikel (misal: https://news.biz.id/post/judul-artikel) pertama kali diakses oleh browser atau bot crawler (Googlebot, Facebook, Twitter).
-Tugas:
-Mengambil slug dari URL (path.split('/')[2]).
-Mengambil data artikel (judul, ringkasan, gambar sampul, penulis) langsung dari Database D1 (SELECT ... FROM posts WHERE slug = ?) atau fallback ke GitHub Markdown.
-Memodifikasi file index.html on-the-fly dengan menyuntikkan:
-Tag <title> artikel dinamis
-OpenGraph Meta (og:title, og:image, og:description)
-Twitter Card
-Rich Snippet Schema.org NewsArticle (JSON-LD) untuk Google Search.
-Mengirimkan dokumen HTML ke browser pembaca.
-2. index.html & src/main.tsx (Entry Point & Mount)
-Kapan bekerja: Ketika file HTML tiba di browser pengguna.
-Tugas:
-index.html menyediakan wadah utama: <div id="root"></div> serta font dan styling Tailwind.
-src/main.tsx mengeksekusi inisialisasi React dan me-render komponen utama <App /> ke dalam #root.
-3. src/App.tsx (Router & State Coordinator)
-Kapan bekerja: Saat aplikasi React aktif di browser.
-Tugas:
-Membaca window.location.pathname untuk mendeteksi apakah pengguna sedang membuka artikel (/post/:slug atau /artikel/:slug).
-Mencocokkan slug dengan artikel yang ada di database/state.
-Menampilkan komponen <ArticleReader article={selectedArticle} ... />.
-4. src/components/ArticleReader.tsx (Engine Pemrosesan HTML Artikel)
-Kapan bekerja: Komponen inilah yang membuat dan merender isi HTML artikel.
-Urutan konversi:
-TOC & Heading Generator: Mengubah format Markdown #, ##, ### menjadi tag <h2 id="..."> dan <h3 id="..."> serta membuat daftar isi otomatis (Table of Contents).
-Typography Parser: Mengubah syntax Markdown bold **teks**, italic *teks*, blockquote >, dan list - menjadi tag HTML semantik Tailwind (<strong class="...">, <blockquote>, <li class="...">).
-Ad Injection (Sponsor Berita): Menghitung jumlah paragraf, lalu menyisipkan blok iklan responsif setelah paragraf ke-2 (jika diaktifkan di konfigurasi).
-Autolinks Injector: Mengambil data autolink dari /api/autolinks (D1 Database), mencari kata kunci di dalam teks, lalu otomatis mengubahnya menjadi hyperlink <a href="...">keyword</a>.
-Rendering ke Layar: Menyajikan seluruh kode HTML yang sudah jadi ke dalam DOM:
-code
-Tsx
+### 🏆 Rekomendasi Utama: Gunakan `wrangler.toml` (*Infrastructure as Code*)
+
+Sangat disarankan **100% menggunakan file `wrangler.toml**` sebagai satu-satunya acuan konfigurasi (*Single Source of Truth*), alih-alih mengatur *binding* secara manual melalui Dashboard Cloudflare Pages.
+
+#### 💡 Keunggulan Menggunakan `wrangler.toml`:
+
+* **Mencegah *Human Error* & *Mismatch* ID:** Seluruh ID database aktif (contoh: `25ef0e79-4cfe-4cee-a71b-2e9009886a5b`) tercatat transparan di dalam repositori. Anda tidak perlu menebak konfigurasi yang pernah dibuat di dashboard.
+* **Sinkronisasi Otomatis saat Deploy:** Setiap kali Anda melakukan `git push` atau *redeploy*, Cloudflare Pages akan otomatis membaca `wrangler.toml`. Tidak perlu mengeklik tombol *"Add Binding"* secara manual lagi.
+* **Mendukung Fitur Modern Cloudflare:** Cloudflare Pages versi terbaru secara otomatis memprioritaskan konfigurasi dari `wrangler.toml` dan mengunci (*lock*) perubahan manual di dashboard untuk mencegah konflik data.
+
+---
+
+### 🛡️ Panduan Lokasi Konfigurasi (Best Practices)
+
+| Komponen | Lokasi Konfigurasi Terbaik | Keterangan & Catatan |
+| --- | --- | --- |
+| **D1 Database Binding** (`DB`) | `wrangler.toml` (`[[d1_databases]]`) | Database ID bersifat aman untuk dicatat di file repositori Git. |
+| **KV Namespace** (`CONFIG_KV`) | `wrangler.toml` (`[[kv_namespaces]]`) | Pasang jika membutuhkan *edge caching* ekstra cepat, atau hapus jika cukup memakai D1 saja. |
+| **Variabel Umum** (`SITE_URL`, `GITHUB_REPO`) | `wrangler.toml` (`[vars]`) | Memudahkan perubahan konfigurasi jika ada pergantian domain di masa depan. |
+| **Kredensial Rahasia** (`GITHUB_TOKEN`, `ADMIN_PASSWORD`) | **Dashboard Cloudflare**<br>
+
+<br>*(Settings → Environment Variables)* | **Wajib di Dashboard** agar token rahasia tidak bocor ke publik melalui repositori Git. |
+
+---
+
+### 🔍 Tips Pengecekan Real-Time
+
+Jika Anda membuat database baru atau ingin memverifikasi koneksi database di lingkungan *production*, buka *endpoint* berikut melalui browser:
+
+👉 **`[https://domain.com/api/debug-d1](https://domain.com/api/debug-d1)`**
+
+*Endpoint* ini akan langsung menampilkan status koneksi `env.DB`, daftar tabel yang terdeteksi, serta total jumlah komentar secara *real-time*.
+
+
+
+
+---
+
+### 🗺️ Diagram Alur  dan urutan kerja file, Singkat :
+
+```text
+1. Browser Request (/post/slug)
+       ↓
+2. functions/api/[[path]].ts        ──► (Edge SSR: Ambil Data & Inject Meta Tags)
+       ↓
+3. index.html & src/main.tsx        ──► (HTML Skeleton & Inisialisasi React)
+       ↓
+4. src/App.tsx                      ──► (Routing & Manajemen State Artikel)
+       ↓
+5. src/components/ArticleReader.tsx ──► (Parser Markdown, Iklan, Autolink & TOC)
+       ↓
+6. DOM Output                       ──► (<div class="article-body">...</div>)
+
+```
+
+---
+
+### 📂 Urutan Kerja File Secara Rinci
+
+**1. `functions/api/[[path]].ts` (Cloudflare Pages Function / Edge SSR)**
+
+* **Kapan Bekerja:** Saat URL artikel (misal: `[https://domain.com/post/judul-artikel](https://domain.com/post/judul-artikel)`) pertama kali diakses oleh pengguna atau bot crawler (Googlebot, Facebook, Twitter).
+* **Tugas Utama:**
+* **Ekstraksi URL:** Mengambil *slug* dari URL (`path.split('/')[2]`).
+* **Fetch Data:** Mengambil data artikel (judul, ringkasan, gambar sampul, penulis) dari Database D1 (`SELECT ... FROM posts WHERE slug = ?`) dengan fallback ke GitHub Markdown.
+* **Inject Meta Tags (SEO/OG):** Memodifikasi `index.html` secara langsung dengan menyuntikkan:
+* Tag `<title>` dinamis sesuai judul artikel.
+* OpenGraph Meta (`og:title`, `og:image`, `og:description`).
+* Twitter Card.
+* Schema.org NewsArticle (JSON-LD) untuk Google Search.
+
+
+* **Response:** Mengirimkan dokumen HTML yang sudah siap ke browser.
+
+
+
+---
+
+**2. `index.html` & `src/main.tsx` (Entry Point & Mount)**
+
+* **Kapan Bekerja:** Ketika file HTML tiba di browser pengguna.
+* **Tugas Utama:**
+* `index.html`: Menyediakan struktur dasar HTML, wadah `<div id="root"></div>`, font, serta konfigurasi CSS Tailwind.
+* `src/main.tsx`: Menjalankan React dan me-render komponen utama `<App/>` ke dalam elemen `#root`.
+
+
+
+---
+
+**3. `src/App.tsx` (Router & State Coordinator)**
+
+* **Kapan Bekerja:** Saat aplikasi React sudah aktif di browser.
+* **Tugas Utama:**
+* **Routing:** Membaca `window.location.pathname` untuk mendeteksi rute artikel (`/post/:slug` atau `/artikel/:slug`).
+* **Matching Data:** Mencocokkan *slug* dengan data artikel yang ada di database atau state.
+* **Rendering:** Menampilkan komponen `<ArticleReader article="{selectedArticle}"/>`.
+
+
+
+---
+
+**4. `src/components/ArticleReader.tsx` (Engine Pemrosesan HTML Artikel)**
+
+* **Kapan Bekerja:** Bertanggung jawab memproses dan mengonversi isi artikel dari Markdown menjadi tampilan HTML.
+* **Tahapan Konversi:**
+1. **TOC & Heading Generator:** Mengubah header Markdown (`#`, `##`, `###`) menjadi tag `<h2 id="...">` dan `<h3 id="...">` serta menyusun Daftar Isi (Table of Contents) otomatis.
+2. **Typography Parser:** Mengubah sintaks Markdown (bold, italic, blockquote, list) menjadi elemen HTML semantik berorientasi Tailwind (`<strong>`, `<blockquote>`, `<li>`).
+3. **Ad Injection:** Menghitung jumlah paragraf, lalu menyisipkan blok iklan responsif secara otomatis setelah paragraf ke-2.
+4. **Autolinks Injector:** Mengambil data kata kunci dari `/api/autolinks` (D1 Database) dan otomatis mengubah teks yang cocok menjadi hyperlink (`<a href="...">`).
+5. **DOM Output:** Menyajikan kode HTML akhir ke layar via React:
+```tsx
 <div 
   className="article-body prose prose-stone max-w-none prose-headings:font-serif prose-a:text-amber-600 prose-img:rounded-2xl"
   dangerouslySetInnerHTML={{ __html: renderedHtml }}
 />
-5. src/components/CommentsSection.tsx (Komponen Pendukung di Bawah Artikel)
-Kapan bekerja: Setelah pembaca selesai membaca isi artikel dan scroll ke bagian bawah.
-Tugas: Menghubungkan ke endpoint /api/comments?postSlug=... di Cloudflare D1 untuk menampilkan komentar pembaca dan menangani pengiriman komentar baru.
+
+```
 
 
 
+
+
+---
+
+**5. `src/components/CommentsSection.tsx` (Komponen Komentar)**
+
+* **Kapan Bekerja:** Saat pengguna menggeser (*scroll*) layar ke bagian bawah artikel.
+* **Tugas Utama:** Terhubung ke endpoint `/api/comments?postSlug=...` di Cloudflare D1 untuk memuat daftar komentar serta menangani pengiriman komentar baru dari pembaca.
+
+---
 ## ✨ FITUR UNGGULAN ENGINE
 1. **Auto-Linking Engine SEO On-Page:**
    - Semua kata kunci terdaftar (seperti *"pola asuh"*, *"balita"*, *"stunting"*, *"sensory play"*) secara otomatis diubah menjadi internal link menuju artikel terkait.
