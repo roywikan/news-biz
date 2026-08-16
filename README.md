@@ -99,6 +99,58 @@ DEBUG: https://domain.com/api/debug-d1
 
 ---
 
+Tentu, berikut adalah panduan langkah demi langkah untuk membuat **Google OAuth 2.0 Client ID** dan memasukkannya ke **Cloudflare Pages**:
+
+---
+
+## Langkah 1: Buka & Konfigurasi Google Cloud Console
+
+1. Buka browser dan masuk ke [Google Cloud Console](https://console.cloud.google.com/).
+2. Jika belum memiliki proyek, klik menu dropdown proyek di bagian kiri atas (sebelah logo Google Cloud) lalu klik **New Project**. Beri nama proyek Anda (misal: `Parenting Portal`) dan klik **Create**.
+3. Di bilah pencarian atas, ketik **OAuth consent screen** (Layar persetujuan OAuth) dan pilih menu tersebut:
+* Pilih **External** sebagai *User Type*, lalu klik **Create**.
+* Isi nama aplikasi (misal: `Parenting Portal`) dan email dukungan Anda.
+* Pada bagian *Authorized domains*, masukkan domain utama Anda: `domain.com`.
+* Simpan dan selesaikan hingga tahap *Dashboard* OAuth consent screen. *(Pastikan status diubah/di-publish ke **In Production** jika sudah siap untuk publik).*
+
+
+
+---
+
+## Langkah 2: Buat OAuth 2.0 Client ID (Web Application)
+
+1. Di menu navigasi sebelah kiri Google Cloud Console, klik **Credentials** (Kredensial).
+2. Klik tombol **+ Create Credentials** di bagian atas, lalu pilih **OAuth client ID**.
+3. Pada dropdown **Application type**, pilih **Web application**.
+4. Beri nama credential ini (misal: `Parenting Portal Web Client`).
+5. Gulir ke bawah ke bagian **Authorized JavaScript origins**:
+* Klik **+ Add URI**.
+* Masukkan URL domain Anda: `[https://domain.com](https://domain.com)`
+* *(Opsional)* Jika Anda memiliki URL staging/preview Cloudflare Pages (misal: `[https://xxx.pages.dev](https://xxx.pages.dev)`), Anda juga bisa menambahkan URI tersebut di sini.
+
+
+6. *(Opsional)* Pada bagian **Authorized redirect URIs**, tambahkan `[https://domain.com](https://domain.com)` jika aplikasi Anda membutuhkan callback redirect.
+7. Klik **Create**.
+8. Pop-up akan muncul menampilkan **Client ID** Anda (berbentuk string panjang seperti `xxxxxxxxx-xxxxxxxx.apps.googleusercontent.com`). **Salin Client ID ini.**
+
+---
+
+## Langkah 3: Tambahkan Variabel di Cloudflare Pages
+
+1. Masuk ke [Dashboard Cloudflare](https://dash.cloudflare.com/).
+2. Navigasi ke **Workers & Pages** di sidebar kiri, lalu pilih proyek Pages Anda.
+3. Klik tab **Settings** di bagian atas, lalu pilih menu **Environment variables** di sidebar kiri.
+4. Di seksi **Environment variables**, klik **Add variable** (atau *Edit variables* jika sudah ada):
+* **Variable name:** `VITE_GOOGLE_CLIENT_ID`
+* **Value:** *(Tempelkan Client ID yang Anda salin dari Google Cloud Console)*
+* **Environment:** Pilih *Production* (dan *Preview* jika diperlukan).
+
+
+5. Klik **Save**.
+6. **Penting:** Agar variabel lingkungan bersawalan `VITE_` ini dibaca saat proses kompilasi frontend (Vite Build), Anda perlu **melakukan Retry Deployment / Trigger Build ulang** pada Cloudflare Pages Anda.
+
+7. 
+---
 
 🏆 Rekomendasi Utama: Gunakan wrangler.toml sebagai Single Source of Truth
 Sangat disarankan 100% menggunakan wrangler.toml (Infrastructure as Code) dan tidak mencampur konfigurasi manual di Dashboard Pages.
