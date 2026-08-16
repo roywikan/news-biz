@@ -120,6 +120,64 @@ Jika suatu saat Anda membuat database baru atau ingin memverifikasi koneksi data
 Cukup buka endpoint: https://news.biz.id/api/debug-d1
 Endpoint ini akan langsung mengembalikan tabel apa saja yang terbaca, total jumlah komentar, dan status koneksi env.DB secara real-time.
 
+---
+
+🗺️ Diagram Alur Singkat
+code
+Text
+1. Browser Request (/post/slug) 
+       ⬇
+2. functions/api/[[path]].ts  (Cloudflare Edge SSR: Ambil Data & Inject Meta Tags)
+       ⬇
+3. index.html & src/main.tsx  (HTML Skeleton & Bootstrapping React)
+       ⬇
+4. src/App.tsx                (Routing, Ambil Data Post dari API/D1/State)
+       ⬇
+5. src/components/ArticleReader.tsx (Markdown-to-HTML Parser, TOC, Autolinks, Ads)
+       ⬇
+6. DOM Output (<div class="article-body">...</div>)
+📂 Urutan Kerja File Secara Rinci:
+1. functions/api/[[path]].ts (Cloudflare Pages Function / Edge SSR)
+Kapan bekerja: Saat URL artikel (misal: https://news.biz.id/post/judul-artikel) pertama kali diakses oleh browser atau bot crawler (Googlebot, Facebook, Twitter).
+Tugas:
+Mengambil slug dari URL (path.split('/')[2]).
+Mengambil data artikel (judul, ringkasan, gambar sampul, penulis) langsung dari Database D1 (SELECT ... FROM posts WHERE slug = ?) atau fallback ke GitHub Markdown.
+Memodifikasi file index.html on-the-fly dengan menyuntikkan:
+Tag <title> artikel dinamis
+OpenGraph Meta (og:title, og:image, og:description)
+Twitter Card
+Rich Snippet Schema.org NewsArticle (JSON-LD) untuk Google Search.
+Mengirimkan dokumen HTML ke browser pembaca.
+2. index.html & src/main.tsx (Entry Point & Mount)
+Kapan bekerja: Ketika file HTML tiba di browser pengguna.
+Tugas:
+index.html menyediakan wadah utama: <div id="root"></div> serta font dan styling Tailwind.
+src/main.tsx mengeksekusi inisialisasi React dan me-render komponen utama <App /> ke dalam #root.
+3. src/App.tsx (Router & State Coordinator)
+Kapan bekerja: Saat aplikasi React aktif di browser.
+Tugas:
+Membaca window.location.pathname untuk mendeteksi apakah pengguna sedang membuka artikel (/post/:slug atau /artikel/:slug).
+Mencocokkan slug dengan artikel yang ada di database/state.
+Menampilkan komponen <ArticleReader article={selectedArticle} ... />.
+4. src/components/ArticleReader.tsx (Engine Pemrosesan HTML Artikel)
+Kapan bekerja: Komponen inilah yang membuat dan merender isi HTML artikel.
+Urutan konversi:
+TOC & Heading Generator: Mengubah format Markdown #, ##, ### menjadi tag <h2 id="..."> dan <h3 id="..."> serta membuat daftar isi otomatis (Table of Contents).
+Typography Parser: Mengubah syntax Markdown bold **teks**, italic *teks*, blockquote >, dan list - menjadi tag HTML semantik Tailwind (<strong class="...">, <blockquote>, <li class="...">).
+Ad Injection (Sponsor Berita): Menghitung jumlah paragraf, lalu menyisipkan blok iklan responsif setelah paragraf ke-2 (jika diaktifkan di konfigurasi).
+Autolinks Injector: Mengambil data autolink dari /api/autolinks (D1 Database), mencari kata kunci di dalam teks, lalu otomatis mengubahnya menjadi hyperlink <a href="...">keyword</a>.
+Rendering ke Layar: Menyajikan seluruh kode HTML yang sudah jadi ke dalam DOM:
+code
+Tsx
+<div 
+  className="article-body prose prose-stone max-w-none prose-headings:font-serif prose-a:text-amber-600 prose-img:rounded-2xl"
+  dangerouslySetInnerHTML={{ __html: renderedHtml }}
+/>
+5. src/components/CommentsSection.tsx (Komponen Pendukung di Bawah Artikel)
+Kapan bekerja: Setelah pembaca selesai membaca isi artikel dan scroll ke bagian bawah.
+Tugas: Menghubungkan ke endpoint /api/comments?postSlug=... di Cloudflare D1 untuk menampilkan komentar pembaca dan menangani pengiriman komentar baru.
+
+
 
 ## ✨ FITUR UNGGULAN ENGINE
 1. **Auto-Linking Engine SEO On-Page:**
