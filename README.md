@@ -1,4 +1,4 @@
-# 🚀 Panduan Setup Cloud-Native Blog Engine `parenting.my.id` (100% Browser / Tanpa Terminal / Tanpa Software Lokal)
+# 🚀 Panduan Setup Cloud-Native Blog Engine `domain.com` (100% Browser / Tanpa Terminal / Tanpa Software Lokal)
 
 Sistem Blog Engine modern, ultra-cepat, dan SEO-friendly ini beroperasi sepenuhnya secara **cloud-native** menggunakan **Cloudflare Pages / Workers**, **Cloudflare D1 (Serverless SQLite)**, dan **GitHub API**. 
 
@@ -9,7 +9,7 @@ Penulis dan Admin dapat mengelola artikel, gambar, SEO meta, serta sistem auto-l
 ## 📋 Prasyarat (Semua Gratis)
 1. Akun **GitHub** ([github.com](https://github.com))
 2. Akun **Cloudflare** ([cloudflare.com](https://cloudflare.com))
-3. Domain **parenting.my.id** yang DNS-nya sudah terhubung ke Cloudflare.
+3. Domain **domain.com** yang DNS-nya sudah terhubung ke Cloudflare.
 
 ---
 
@@ -53,7 +53,7 @@ Penulis dapat mengunggah gambar langsung di Editor WYSIWYG, yang akan disimpan s
    - **Build command**: `npm run build`
    - **Build output directory**: `dist`
 6. Buka bagian **Environment variables (advanced)** dan tambahkan variabel berikut:
-   - `SITE_URL`: `https://parenting.my.id`
+   - `SITE_URL`: `https://domain.com`
    - `GITHUB_TOKEN`: *(Paste Token GitHub dari Langkah 3)*
    - `GITHUB_OWNER`: *(Username GitHub Anda)*
    - `GITHUB_REPO`: `parenting-my-id`
@@ -62,7 +62,7 @@ Penulis dapat mengunggah gambar langsung di Editor WYSIWYG, yang akan disimpan s
 8. Klik **Save and Deploy**. Cloudflare akan membangun dan mempublikasikan situs Anda secara otomatis!
 ---
 
-## 🔗 LANGKAH 5: Hubungkan Binding Database D1 & Domain `parenting.my.id`
+## 🔗 LANGKAH 5: Hubungkan Binding Database D1 & Domain `domain.com`
 1. Setelah deployment pertama selesai, buka proyek Pages Anda di Cloudflare -> Tab **Settings** -> **Functions**.
 2. Gulir ke bawah ke bagian **D1 database bindings**.
 3. Klik **Add binding**:
@@ -70,20 +70,20 @@ Penulis dapat mengunggah gambar langsung di Editor WYSIWYG, yang akan disimpan s
    - **D1 database**: Pilih `parenting-db`
 4. Simpan perubahan.
 5. Lalu - Masuk ke tab **Custom domains** -> Klik **Set up a custom domain**.
-6. Ketik `parenting.my.id` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
+6. Ketik `domain.com` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
 
 ---
 
-## 🔗 LANGKAH 6: Hubungkan Domain `news.biz.id`
+## 🔗 LANGKAH 6: Hubungkan Domain `domain.com`
 1. Masuk ke tab **Custom domains** -> Klik **Set up a custom domain**.
-2. Ketik `parenting.my.id` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
+2. Ketik `domain.com` dan klik **Continue**. Cloudflare akan mengurus sertifikat SSL HTTPS secara otomatis!
 
 ---
 
 ## 🔑 AKSES PORTAL ADMIN (`/admin`) & CARA PENGGUNAAN
-Situs Anda kini aktif di **https://parenting.my.id**!
+Situs Anda kini aktif di **https://domain.com**!
 Akses portal admin berbasis web di:
-👉 **`https://parenting.my.id/admin`**
+👉 **`https://domain.com/admin`**
 
 ### Kredensial Login Default:
 - **Akun Admin (Akses Penuh):**
@@ -94,6 +94,32 @@ Akses portal admin berbasis web di:
   - Password: ``
 
 ---
+DEBUG: https://domain.com/api/debug-d1
+
+
+---
+
+
+🏆 Rekomendasi Utama: Gunakan wrangler.toml sebagai Single Source of Truth
+Sangat disarankan 100% menggunakan wrangler.toml (Infrastructure as Code) dan tidak mencampur konfigurasi manual di Dashboard Pages.
+Alasan Mengapa wrangler.toml Jauh Lebih Baik:
+Pencegahan Human Error & Mismatch ID:
+Ketika Anda membuka repositori di masa depan, Anda langsung melihat dengan jelas database ID mana yang sedang aktif (25ef0e79-4cfe-4cee-a71b-2e9009886a5b) tanpa perlu menebak-nebak apa yang pernah diklik di dashboard.
+Otomatis Sync saat Deploy:
+Setiap kali ada commit/push baru atau redeploy di branch manapun, Cloudflare Pages akan otomatis membaca wrangler.toml tanpa perlu klik manual tombol "Add Binding" atau "Retry Deployment" di dashboard.
+Pesan "Managed through wrangler.toml":
+Cloudflare Pages generasi sekarang secara default mengunci pengaturan binding di dashboard jika mendeteksi adanya file wrangler.toml, sehingga jika mencoba mengubah via dashboard sering kali diabaikan oleh sistem.
+🛡️ 4 Aturan Praktis (Best Practices) untuk Proyek Ini:
+Komponen	Tempat Konfigurasi Terbaik	Keterangan
+D1 Database Binding (DB)	wrangler.toml ([[d1_databases]])	ID database publik aman dicatat di file konfigurasi.
+KV Namespace (CONFIG_KV)	wrangler.toml ([[kv_namespaces]])	Pasang jika ingin edge caching, atau hapus jika cukup D1 saja.
+Variabel Umum (SITE_URL, GITHUB_REPO)	wrangler.toml ([vars])	Mudah diubah jika domain berganti.
+Rahasia / Secrets (GITHUB_TOKEN, ADMIN_PASSWORD)	Cloudflare Dashboard (Settings → Environment Variables)	Wajib di Dashboard agar token GitHub tidak bocor ke publik di file Git.
+💡 Tips Cepat Pengecekan Selanjutnya:
+Jika suatu saat Anda membuat database baru atau ingin memverifikasi koneksi database di lingkungan production:
+Cukup buka endpoint: https://news.biz.id/api/debug-d1
+Endpoint ini akan langsung mengembalikan tabel apa saja yang terbaca, total jumlah komentar, dan status koneksi env.DB secara real-time.
+
 
 ## ✨ FITUR UNGGULAN ENGINE
 1. **Auto-Linking Engine SEO On-Page:**
